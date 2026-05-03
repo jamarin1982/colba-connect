@@ -14,16 +14,31 @@ export default function ImprovementDetail() {
   const [taskEndDate, setTaskEndDate] = useState('');
   const [taskFiles, setTaskFiles] = useState([]);
   const [socializationEmails, setSocializationEmails] = useState('');
+  const [socializationDate, setSocializationDate] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [devList, setDevList] = useState([]);
   const [selectedDev, setSelectedDev] = useState('');
 
   const fetchImprovement = async () => {
     try {
-      const res = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
-      setImprovement(res.data);
-    } catch (error) {
+      const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
+      setImprovement(response.data);
       
+      // Auto-fill emails for socialization if not set
+      if (!socializationEmails) {
+        const adminRes = await axios.get('http://192.168.101.16:5000/api/users');
+        const admins = adminRes.data.filter(u => u.role === 'Administrador').map(u => u.email);
+        const devRes = await axios.get(`http://192.168.101.16:5000/api/users`);
+        const dev = devRes.data.find(u => u.id === response.data.developer_id)?.email;
+        const creator = devRes.data.find(u => u.id === response.data.creator_id)?.email;
+        
+        const emailSet = new Set([...admins]);
+        if (dev) emailSet.add(dev);
+        if (creator) emailSet.add(creator);
+        setSocializationEmails(Array.from(emailSet).join(', '));
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -31,20 +46,13 @@ export default function ImprovementDetail() {
     fetchImprovement();
     if (user.role === 'Administrador') {
       axios.get('http://192.168.101.16:5000/api/users')
-        .then(res => setDevList(res.data.filter(u => u.role === 'Desarrollador')))
+        .then(res => setDevList(res.data.filter(u => u.role === 'Desarrollador' || u.role === 'Administrador')))
         .catch(console.error);
     }
-  }, [id, user.role]);
+  }, [id]);
 
   const addTask = async (e) => {
     e.preventDefault();
-    if (!newTask) return;
-    
-    if (new Date(taskEndDate) <= new Date(taskStartDate)) {
-      alert('La fecha de fin debe ser posterior a la de inicio');
-      return;
-    }
-    
     const formData = new FormData();
     formData.append('description', newTask);
     formData.append('startDate', taskStartDate);
@@ -54,16 +62,12 @@ export default function ImprovementDetail() {
     }
 
     try {
-      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/tasks`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/tasks`, formData);
       setNewTask('');
-      setTaskStartDate('');
-      setTaskEndDate('');
       setTaskFiles([]);
       fetchImprovement();
     } catch (error) {
-      alert(error.response?.data?.error || 'Error al registrar tarea');
+      alert(error.response?.data?.error || 'Error al agregar tarea');
     }
   };
 
@@ -77,12 +81,13 @@ export default function ImprovementDetail() {
     }
   };
 
-  const changeState = async (newState, emails = [], developerId = null) => {
+  const changeState = async (newState, emails = [], developerId = null, meetingDate = null) => {
     try {
       await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, { 
         state: newState, 
         emails,
-        developerId 
+        developerId,
+        meetingDate
       });
       setShowEmailModal(false);
       fetchImprovement();
@@ -93,8 +98,12 @@ export default function ImprovementDetail() {
 
   const handleDesarrollado = (e) => {
     e.preventDefault();
+    if (!socializationDate) {
+      alert('Por favor selecciona una fecha y hora para la reunión de socialización.');
+      return;
+    }
     const emailList = socializationEmails.split(',').map(e => e.trim()).filter(e => e);
-    changeState('Desarrollado', emailList);
+    changeState('Desarrollado', emailList, null, socializationDate);
   };
 
   const deleteImprovement = async () => {
@@ -327,9 +336,19 @@ export default function ImprovementDetail() {
         <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
           <div className="glass-panel animate-fade-in" style={{width: '100%', maxWidth: '500px'}}>
             <h2 style={{marginBottom: '20px'}}>Finalizar Desarrollo</h2>
-            <form onSubmit={handleDesarrollado}>
-              <div className="input-group">
-                <label>Correos para Socialización (separados por coma)</label>
+            <form onSubmit={handleDesarrollado} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+              <div>
+                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Fecha y Hora de Socialización</label>
+                <input 
+                  type="datetime-local" 
+                  className="input-control" 
+                  value={socializationDate} 
+                  onChange={e => setSocializationDate(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div>
+                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Correos para Invitación (Participantes)</label>
                 <input 
                   type="text" 
                   className="input-control" 
@@ -338,10 +357,11 @@ export default function ImprovementDetail() {
                   placeholder="ejemplo1@empresa.com, ejemplo2@empresa.com" 
                   required 
                 />
+                <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px'}}>Se enviará la lista de tareas realizadas y el enlace de Teams.</p>
               </div>
-              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px'}}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowEmailModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Terminar y Crear Evento</button>
+                <button type="submit" className="btn btn-primary">Terminar y Notificar</button>
               </div>
             </form>
           </div>

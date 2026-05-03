@@ -176,13 +176,18 @@ const sendLevantamientoEmail = async (improvementName, emails, meetingDateStr) =
 };
 
 // Function to send Socialization Email
-const sendSocializationEmail = async (improvementName, tasks, emails) => {
+const sendSocializationEmail = async (improvementName, tasks, emails, meetingDate, teamsLink) => {
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER || 'no_responder@grupocolba.com',
       to: emails.join(', '),
       subject: `SOCIALIZACION: ${improvementName}`,
-      text: `La mejora "${improvementName}" fue cargada a productivo.\n\nTareas realizadas:\n${tasks.map(t => '- ' + t.description).join('\n')}`
+      text: `La mejora "${improvementName}" ha sido desarrollada exitosamente y está lista para su revisión final.\n\n` +
+            `RESUMEN DE TAREAS DESARROLLADAS:\n${tasks.map(t => '- ' + t.description).join('\n')}\n\n` +
+            `Se ha programado una reunión de socialización técnica:\n` +
+            `📅 FECHA Y HORA: ${new Date(meetingDate).toLocaleString('es-CO')}\n` +
+            `🔗 ENLACE DE TEAMS: ${teamsLink || 'Pendiente por confirmar'}\n\n` +
+            `Por favor, asista puntualmente para validar el cumplimiento de los requerimientos.`
     });
     console.log(`[EMAIL ENVIADO] Socialización desde no_responder`);
   } catch (err) {
@@ -569,10 +574,24 @@ router.put('/:id/state', verifyToken, async (req, res) => {
       await sendEnDesarrolloEmail(improvement.title, Array.from(emailSet));
     }
     if (state === 'Desarrollado') {
-      const [tasks] = await db.execute('SELECT status FROM tasks WHERE improvement_id = ?', [id]);
-      const allDone = tasks.length > 0 && tasks.every(t => t.status === 'Completada');
+      const [tasksRows] = await db.execute('SELECT status, description FROM tasks WHERE improvement_id = ?', [id]);
+      const allDone = tasksRows.length > 0 && tasksRows.every(t => t.status === 'Completada');
       if (!allDone) {
         return res.status(400).json({ error: 'No se puede entregar la mejora hasta que todas las tareas estén completadas al 100%.' });
+      }
+
+      const { meetingDate } = req.body;
+      if (!meetingDate) return res.status(400).json({ error: 'Debes programar la fecha de socialización para la entrega.' });
+
+      if (emails && emails.length > 0) {
+        for (const email of emails) {
+          await db.execute(
+            "INSERT INTO event_emails (improvement_id, event_type, email) VALUES (?, 'Socializacion', ?)",
+            [id, email]
+          );
+        }
+        const teamsLink = await createGraphEvent(`SOCIALIZACION: ${improvement.title}`, emails, meetingDate);
+        await sendSocializationEmail(improvement.title, tasksRows, emails, meetingDate, teamsLink);
       }
     }
 
@@ -581,29 +600,11 @@ router.put('/:id/state', verifyToken, async (req, res) => {
     }
 
     if (state === 'Socializado') {
-      const [emailRows] = await db.execute(
-        "SELECT email FROM event_emails WHERE improvement_id = ? AND event_type = 'Socializacion'",
-        [id]
-      );
-
-      if (emailRows.length > 0) {
-        const emailList = emailRows.map(r => r.email);
-        const [tasks] = await db.execute("SELECT description FROM tasks WHERE improvement_id = ?", [id]);
-        await sendSocializationEmail(improvement.title, tasks, emailList);
-      }
+      // Socializado state transition remains but notification is now handled during Desarrollado delivery
+      console.log(`[STATE] Transition to Socializado for ID: ${id}`);
     }
 
     await db.execute('UPDATE improvements SET state = ? WHERE id = ?', [state, id]);
-
-    if (state === 'Desarrollado' && emails && emails.length > 0) {
-      for (const email of emails) {
-        await db.execute(
-          "INSERT INTO event_emails (improvement_id, event_type, email) VALUES (?, 'Socializacion', ?)",
-          [id, email]
-        );
-      }
-      createTeamsEvent(`SOCIALIZACION: ${improvement.title}`, emails);
-    }
 
     res.json({ message: 'Estado actualizado a ' + state });
   } catch (err) {
