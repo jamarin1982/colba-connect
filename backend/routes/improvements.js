@@ -226,7 +226,24 @@ const sendSocializationEmail = async (improvementName, tasks, emails, meetingDat
         contentType: 'text/calendar; charset=UTF-8; method=REQUEST',
         content: value
       }]
+    });// Function to send Rating Request Email
+const sendRatingRequestEmail = async (improvementName, creatorEmail, id) => {
+  try {
+    const portalUrl = `http://192.168.101.16:5173/improvement/${id}`;
+    await transporter.sendMail({
+      from: `"ColbaConnect" <${process.env.EMAIL_USER || 'no_responder@grupocolba.com'}>`,
+      to: creatorEmail,
+      subject: `⭐ CALIFICA TU MEJORA: ${improvementName}`,
+      text: `Hola,\n\nLa mejora "${improvementName}" ha sido socializada y marcada como terminada.\n\n` +
+            `Para nosotros es vital conocer tu opinión sobre el resultado final. Por favor, califica la solución ingresando al siguiente enlace:\n\n` +
+            `${portalUrl}\n\n` +
+            `Tu feedback nos ayuda a seguir mejorando nuestros procesos de desarrollo.`
     });
+    console.log(`[EMAIL ENVIADO] Solicitud de calificación enviada a ${creatorEmail}`);
+  } catch (err) {
+    console.error('Error enviando solicitud de calificación:', err.message);
+  }
+};
     console.log(`[EMAIL ENVIADO] Socialización con invitación de calendario.`);
   } catch (err) {
     console.error('Error enviando correo de socialización:', err.message);
@@ -698,7 +715,10 @@ router.put('/:id/state', verifyToken, async (req, res) => {
     }
 
     if (state === 'Socializado') {
-      // Socializado state transition remains but notification is now handled during Desarrollado delivery
+      const [creatorRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.creator_id]);
+      if (creatorRows[0]?.email) {
+        await sendRatingRequestEmail(improvement.title, creatorRows[0].email, id);
+      }
       console.log(`[STATE] Transition to Socializado for ID: ${id}`);
     }
 
@@ -820,6 +840,34 @@ const checkOverdueTasks = async () => {
 
 // Start checking every 5 minutes
 setInterval(checkOverdueTasks, 5 * 60 * 1000);
+
+// Submit project rating (Creator only)
+router.post('/:id/rate', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, feedback } = req.body;
+
+    const [impRows] = await db.execute('SELECT * FROM improvements WHERE id = ?', [id]);
+    const improvement = impRows[0];
+
+    if (!improvement) return res.status(404).json({ error: 'Mejora no encontrada' });
+    if (improvement.creator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el creador puede calificar la mejora' });
+    }
+    if (improvement.state !== 'Socializado') {
+      return res.status(400).json({ error: 'Solo se puede calificar una mejora socializada' });
+    }
+
+    await db.execute(
+      'UPDATE improvements SET rating = ?, rating_feedback = ? WHERE id = ?',
+      [rating, feedback, id]
+    );
+
+    res.json({ message: 'Calificación enviada correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get comments for an improvement
 router.get('/:id/comments', verifyToken, async (req, res) => {

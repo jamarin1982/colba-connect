@@ -20,6 +20,8 @@ export default function ImprovementDetail() {
   const [selectedDev, setSelectedDev] = useState('');
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [userRating, setUserRating] = useState(0);
+  const [userFeedback, setUserFeedback] = useState('');
 
   const fetchImprovement = async () => {
     try {
@@ -49,6 +51,20 @@ export default function ImprovementDetail() {
       fetchComments();
     } catch (error) {
       alert('Error al agregar comentario');
+    }
+  };
+
+  const submitRating = async () => {
+    if (userRating === 0) return alert('Por favor selecciona una calificación');
+    try {
+      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/rate`, { 
+        rating: userRating, 
+        feedback: userFeedback 
+      });
+      alert('¡Gracias por tu feedback!');
+      fetchImprovement();
+    } catch (error) {
+      alert('Error al enviar calificación');
     }
   };
 
@@ -295,6 +311,74 @@ export default function ImprovementDetail() {
             Panel de Control
           </h3>
           <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+            {/* Rating Section for Creator */}
+            {improvement.state === 'Socializado' && user.id === improvement.creator_id && !improvement.rating && (
+              <div style={{padding: '24px', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '16px', border: '2px solid var(--primary-color)', marginBottom: '24px'}}>
+                <h3 style={{fontSize: '18px', fontWeight: 800, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  ⭐ Califica la Solución
+                </h3>
+                <p style={{fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px'}}>
+                  Tu feedback es fundamental para medir la calidad del desarrollo.
+                </p>
+                <div style={{display: 'flex', gap: '12px', marginBottom: '20px', justifyContent: 'center'}}>
+                  {[1, 2, 3, 4, 5].map(num => (
+                    <button 
+                      key={num}
+                      onClick={() => setUserRating(num)}
+                      style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--primary-color)',
+                        background: userRating === num ? 'var(--primary-color)' : 'transparent',
+                        color: userRating === num ? '#0F172A' : 'var(--primary-color)',
+                        fontWeight: 800,
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: userRating === num ? '0 0 15px var(--primary-glow)' : 'none'
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  className="input-control" 
+                  placeholder="¿Qué te pareció el resultado final? (Opcional)"
+                  value={userFeedback}
+                  onChange={e => setUserFeedback(e.target.value)}
+                  style={{minHeight: '80px', fontSize: '14px', marginBottom: '16px'}}
+                />
+                <button 
+                  className="btn btn-primary" 
+                  style={{width: '100%', justifyContent: 'center'}}
+                  onClick={submitRating}
+                >
+                  Enviar Calificación
+                </button>
+              </div>
+            )}
+
+            {/* Display Rating if exists */}
+            {improvement.rating && (
+              <div style={{padding: '24px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '24px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                  <span style={{fontSize: '12px', fontWeight: 800, color: 'var(--primary-color)', textTransform: 'uppercase'}}>Calificación del Usuario</span>
+                  <div style={{display: 'flex', gap: '4px'}}>
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} style={{color: i < improvement.rating ? '#FBBF24' : 'rgba(255,255,255,0.1)', fontSize: '18px'}}>★</span>
+                    ))}
+                  </div>
+                </div>
+                {improvement.rating_feedback && (
+                  <p style={{fontSize: '14px', fontStyle: 'italic', color: 'var(--text-color)', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px'}}>
+                    "{improvement.rating_feedback}"
+                  </p>
+                )}
+              </div>
+            )}
+
             {improvement.state === 'Solicitado' && (user.id === improvement.creator_id || user.role === 'Administrador') && (
               <button className="btn btn-outline" style={{borderColor: 'rgba(244, 63, 94, 0.4)', color: '#F43F5E', width: '100%', justifyContent: 'center'}} onClick={deleteImprovement}>
                 <Trash2 size={18} /> Cancelar Iniciativa
