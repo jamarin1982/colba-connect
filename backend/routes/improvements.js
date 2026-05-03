@@ -175,21 +175,59 @@ const sendLevantamientoEmail = async (improvementName, emails, meetingDateStr) =
   }
 };
 
-// Function to send Socialization Email
-const sendSocializationEmail = async (improvementName, tasks, emails, meetingDate, teamsLink) => {
+// Function to send Socialization Email with Calendar Fallback
+const sendSocializationEmail = async (improvementName, tasks, emails, meetingDateStr, teamsLink) => {
   try {
+    let finalTeamsLink = teamsLink;
+    if (!finalTeamsLink) {
+      finalTeamsLink = createTeamsEvent(`SOCIALIZACION: ${improvementName}`, emails, meetingDateStr);
+    }
+
+    const date = new Date(meetingDateStr);
+    const start = [
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes()
+    ];
+
+    const { error, value } = ics.createEvent({
+      uid: `social-${Date.now()}@grupocolba.com`,
+      start: start,
+      duration: { hours: 1 },
+      title: `SOCIALIZACION: ${improvementName}`,
+      description: `Reunión de socialización técnica para la mejora: ${improvementName}\n\nTareas realizadas:\n${tasks.map(t => '- ' + t.description).join('\n')}\n\nEnlace de Teams: ${finalTeamsLink}`,
+      location: 'Microsoft Teams Meeting',
+      url: finalTeamsLink,
+      status: 'CONFIRMED',
+      busyStatus: 'BUSY',
+      organizer: { name: 'ColbaConnect', email: process.env.EMAIL_USER || 'no_responder@grupocolba.com' },
+      attendees: emails.map(email => ({ email, rsvp: true, role: 'REQ-PARTICIPANT', partstat: 'NEEDS-ACTION' }))
+    });
+
+    const sender = process.env.EMAIL_USER || 'no_responder@grupocolba.com';
     await transporter.sendMail({
-      from: process.env.EMAIL_USER || 'no_responder@grupocolba.com',
+      from: `"ColbaConnect" <${sender}>`,
       to: emails.join(', '),
       subject: `SOCIALIZACION: ${improvementName}`,
       text: `La mejora "${improvementName}" ha sido desarrollada exitosamente y está lista para su revisión final.\n\n` +
             `RESUMEN DE TAREAS DESARROLLADAS:\n${tasks.map(t => '- ' + t.description).join('\n')}\n\n` +
             `Se ha programado una reunión de socialización técnica:\n` +
-            `📅 FECHA Y HORA: ${new Date(meetingDate).toLocaleString('es-CO')}\n` +
-            `🔗 ENLACE DE TEAMS: ${teamsLink || 'Pendiente por confirmar'}\n\n` +
-            `Por favor, asista puntualmente para validar el cumplimiento de los requerimientos.`
+            `📅 FECHA Y HORA: ${date.toLocaleString('es-CO')}\n` +
+            `🔗 ENLACE DE TEAMS: ${finalTeamsLink}\n\n` +
+            `Por favor, asista puntualmente para validar el cumplimiento de los requerimientos.`,
+      icalEvent: {
+        filename: 'socializacion.ics',
+        method: 'REQUEST',
+        content: value
+      },
+      alternatives: [{
+        contentType: 'text/calendar; charset=UTF-8; method=REQUEST',
+        content: value
+      }]
     });
-    console.log(`[EMAIL ENVIADO] Socialización desde no_responder`);
+    console.log(`[EMAIL ENVIADO] Socialización con invitación de calendario.`);
   } catch (err) {
     console.error('Error enviando correo de socialización:', err.message);
   }
