@@ -583,15 +583,35 @@ router.put('/:id/state', verifyToken, async (req, res) => {
       const { meetingDate } = req.body;
       if (!meetingDate) return res.status(400).json({ error: 'Debes programar la fecha de socialización para la entrega.' });
 
-      if (emails && emails.length > 0) {
-        for (const email of emails) {
+      // 1. Gather default stakeholders
+      const [creatorRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.creator_id]);
+      const [devRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.developer_id]);
+      const [adminRows] = await db.execute("SELECT email FROM users WHERE role = 'Administrador'");
+      const [levantamientoRows] = await db.execute("SELECT email FROM event_emails WHERE improvement_id = ? AND event_type = 'Levantamiento'", [id]);
+      
+      const stakeholderEmails = new Set();
+      if (creatorRows[0]?.email) stakeholderEmails.add(creatorRows[0].email);
+      if (devRows[0]?.email) stakeholderEmails.add(devRows[0].email);
+      adminRows.forEach(a => stakeholderEmails.add(a.email));
+      levantamientoRows.forEach(l => stakeholderEmails.add(l.email));
+
+      // 2. Add extra emails from request
+      if (emails && Array.isArray(emails)) {
+        emails.forEach(e => stakeholderEmails.add(e));
+      }
+
+      const finalEmailList = Array.from(stakeholderEmails);
+
+      if (finalEmailList.length > 0) {
+        for (const email of finalEmailList) {
+          // Register for Socializacion event (avoiding duplicates if possible)
           await db.execute(
-            "INSERT INTO event_emails (improvement_id, event_type, email) VALUES (?, 'Socializacion', ?)",
+            "INSERT IGNORE INTO event_emails (improvement_id, event_type, email) VALUES (?, 'Socializacion', ?)",
             [id, email]
           );
         }
-        const teamsLink = await createGraphEvent(`SOCIALIZACION: ${improvement.title}`, emails, meetingDate);
-        await sendSocializationEmail(improvement.title, tasksRows, emails, meetingDate, teamsLink);
+        const teamsLink = await createGraphEvent(`SOCIALIZACION: ${improvement.title}`, finalEmailList, meetingDate);
+        await sendSocializationEmail(improvement.title, tasksRows, finalEmailList, meetingDate, teamsLink);
       }
     }
 

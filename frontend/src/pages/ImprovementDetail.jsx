@@ -23,20 +23,6 @@ export default function ImprovementDetail() {
     try {
       const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
       setImprovement(response.data);
-      
-      // Auto-fill emails for socialization if not set
-      if (!socializationEmails) {
-        const adminRes = await axios.get('http://192.168.101.16:5000/api/users');
-        const admins = adminRes.data.filter(u => u.role === 'Administrador').map(u => u.email);
-        const devRes = await axios.get(`http://192.168.101.16:5000/api/users`);
-        const dev = devRes.data.find(u => u.id === response.data.developer_id)?.email;
-        const creator = devRes.data.find(u => u.id === response.data.creator_id)?.email;
-        
-        const emailSet = new Set([...admins]);
-        if (dev) emailSet.add(dev);
-        if (creator) emailSet.add(creator);
-        setSocializationEmails(Array.from(emailSet).join(', '));
-      }
     } catch (error) {
       console.error(error);
     }
@@ -348,16 +334,17 @@ export default function ImprovementDetail() {
                 />
               </div>
               <div>
-                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Correos para Invitación (Participantes)</label>
+                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Participantes Adicionales</label>
                 <input 
                   type="text" 
                   className="input-control" 
                   value={socializationEmails} 
                   onChange={e => setSocializationEmails(e.target.value)} 
                   placeholder="ejemplo1@empresa.com, ejemplo2@empresa.com" 
-                  required 
                 />
-                <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px'}}>Se enviará la lista de tareas realizadas y el enlace de Teams.</p>
+                <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px'}}>
+                  <b>Nota:</b> El creador, desarrollador y administradores ya están incluidos automáticamente. Use este campo solo para invitados extra.
+                </p>
               </div>
               <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px'}}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowEmailModal(false)}>Cancelar</button>
