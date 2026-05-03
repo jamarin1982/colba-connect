@@ -414,6 +414,41 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+// Get Metrics and KPIs
+router.get('/stats', verifyToken, async (req, res) => {
+  try {
+    const [stateRows] = await db.execute(`
+      SELECT state, COUNT(*) as count 
+      FROM improvements 
+      GROUP BY state
+    `);
+
+    const [taskRows] = await db.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'Completada' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status != 'Completada' AND end_date < NOW() THEN 1 ELSE 0 END) as overdue
+      FROM tasks
+    `);
+
+    const [devRows] = await db.execute(`
+      SELECT u.name, COUNT(i.id) as completed_count
+      FROM users u
+      JOIN improvements i ON u.id = i.developer_id
+      WHERE i.state IN ('Desarrollado', 'Socializado')
+      GROUP BY u.id
+    `);
+
+    res.json({
+      states: stateRows,
+      tasks: taskRows[0],
+      developers: devRows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get single improvement
 router.get('/:id', verifyToken, async (req, res) => {
   try {
@@ -737,49 +772,6 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await db.execute('DELETE FROM improvements WHERE id = ?', [id]);
 
     res.json({ message: 'Mejora eliminada correctamente y correo de cancelación enviado' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get Metrics and KPIs
-router.get('/stats', verifyToken, async (req, res) => {
-  try {
-    // 1. Improvements by state
-    const [stateRows] = await db.execute(`
-      SELECT state, COUNT(*) as count 
-      FROM improvements 
-      GROUP BY state
-    `);
-
-    // 2. Task Stats
-    const [taskRows] = await db.execute(`
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'Completada' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status != 'Completada' AND end_date < NOW() THEN 1 ELSE 0 END) as overdue
-      FROM tasks
-    `);
-
-    // 3. Developer performance
-    const [devRows] = await db.execute(`
-      SELECT u.name, COUNT(i.id) as completed_count
-      FROM users u
-      JOIN improvements i ON u.id = i.developer_id
-      WHERE i.state IN ('Desarrollado', 'Socializado')
-      GROUP BY u.id
-    `);
-
-    // 4. Avg Development Time (Days)
-    // This is a bit complex as we don't have a transitions table, 
-    // but we can estimate using current state dates if we had them.
-    // For now, let's just return what we have.
-
-    res.json({
-      states: stateRows,
-      tasks: taskRows[0],
-      developers: devRows
-    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
