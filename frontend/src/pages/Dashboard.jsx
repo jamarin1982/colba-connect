@@ -235,7 +235,11 @@ export default function Dashboard() {
                     value={newMeetingDate} 
                     onChange={e => setNewMeetingDate(e.target.value)} 
                     required 
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={(() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      return now.toISOString().slice(0, 16);
+                    })()}
                     style={{padding: '16px 20px', borderRadius: '12px', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(15, 23, 42, 0.9)'}}
                   />
                   <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px'}}>

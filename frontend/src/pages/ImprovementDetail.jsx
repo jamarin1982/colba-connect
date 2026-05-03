@@ -333,7 +333,11 @@ export default function ImprovementDetail() {
                   value={socializationDate} 
                   onChange={e => setSocializationDate(e.target.value)} 
                   required 
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={(() => {
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                    return now.toISOString().slice(0, 16);
+                  })()}
                 />
               </div>
               <div>
