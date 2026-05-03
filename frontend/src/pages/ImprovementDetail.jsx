@@ -16,15 +16,38 @@ export default function ImprovementDetail() {
   const [socializationEmails, setSocializationEmails] = useState('');
   const [socializationDate, setSocializationDate] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [devList, setDevList] = useState([]);
   const [selectedDev, setSelectedDev] = useState('');
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
 
   const fetchImprovement = async () => {
     try {
       const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
       setImprovement(response.data);
+      fetchComments();
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}/comments`);
+      setComments(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const addComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    try {
+      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/comments`, { content: newComment });
+      setNewComment('');
+      fetchComments();
+    } catch (error) {
+      alert('Error al agregar comentario');
     }
   };
 
@@ -217,6 +240,52 @@ export default function ImprovementDetail() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Collaboration Wall (Comments) */}
+          <div className="glass-panel animate-fade-in" style={{marginTop: '32px', padding: '32px'}}>
+            <h3 style={{fontSize: '20px', fontWeight: 600, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <Send size={20} color="var(--primary-color)" /> Bitácora de Colaboración
+            </h3>
+            
+            <div style={{maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px', paddingRight: '10px'}}>
+              {comments.map((c, i) => (
+                <div key={i} style={{
+                  alignSelf: c.user_id === user.id ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  padding: '16px',
+                  background: c.user_id === user.id ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.03)',
+                  borderRadius: '16px',
+                  border: c.user_id === user.id ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                  position: 'relative'
+                }}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '20px'}}>
+                    <span style={{fontSize: '11px', fontWeight: 800, color: 'var(--primary-color)', textTransform: 'uppercase'}}>{c.user_name} ({c.user_role})</span>
+                    <span style={{fontSize: '10px', color: 'var(--text-muted)'}}>{new Date(c.created_at).toLocaleString('es-CO')}</span>
+                  </div>
+                  <p style={{fontSize: '14px', lineHeight: '1.6', color: 'var(--text-color)'}}>{c.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 && (
+                <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px'}}>
+                  No hay comentarios aún. ¡Inicia la conversación!
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={addComment} style={{display: 'flex', gap: '12px'}}>
+              <input 
+                type="text" 
+                className="input-control" 
+                placeholder="Escribe una pregunta o aclaración..." 
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                style={{flex: 1, padding: '14px 20px', borderRadius: '12px'}}
+              />
+              <button type="submit" className="btn btn-primary" style={{padding: '0 24px', borderRadius: '12px'}}>
+                <Send size={18} />
+              </button>
+            </form>
           </div>
         </div>
 

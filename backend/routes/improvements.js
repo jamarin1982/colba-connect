@@ -821,4 +821,39 @@ const checkOverdueTasks = async () => {
 // Start checking every 5 minutes
 setInterval(checkOverdueTasks, 5 * 60 * 1000);
 
+// Get comments for an improvement
+router.get('/:id/comments', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await db.execute(`
+      SELECT c.*, u.name as user_name, u.role as user_role
+      FROM comments c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.improvement_id = ?
+      ORDER BY c.created_at ASC
+    `, [id]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a comment
+router.post('/:id/comments', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'El comentario no puede estar vacío' });
+
+    await db.execute(
+      'INSERT INTO comments (improvement_id, user_id, content) VALUES (?, ?, ?)',
+      [id, req.user.id, content]
+    );
+
+    res.json({ message: 'Comentario agregado' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
