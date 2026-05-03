@@ -568,6 +568,14 @@ router.put('/:id/state', verifyToken, async (req, res) => {
 
       await sendEnDesarrolloEmail(improvement.title, Array.from(emailSet));
     }
+    if (state === 'Desarrollado') {
+      const [tasks] = await db.execute('SELECT status FROM tasks WHERE improvement_id = ?', [id]);
+      const allDone = tasks.length > 0 && tasks.every(t => t.status === 'Completada');
+      if (!allDone) {
+        return res.status(400).json({ error: 'No se puede entregar la mejora hasta que todas las tareas estén completadas al 100%.' });
+      }
+    }
+
     if (state === 'Desarrollado' && req.user.role !== 'Desarrollador') {
       return res.status(403).json({ error: 'Solo desarrolladores pueden terminar desarrollo' });
     }

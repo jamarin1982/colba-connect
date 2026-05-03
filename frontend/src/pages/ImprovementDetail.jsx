@@ -247,11 +247,31 @@ export default function ImprovementDetail() {
               </button>
             )}
 
-            {improvement.state === 'En Desarrollo' && user.role === 'Desarrollador' && (
-              <button className="btn btn-danger" style={{width: '100%', justifyContent: 'center', height: '52px', background: 'var(--danger-color)', color: 'white'}} onClick={() => setShowEmailModal(true)}>
-                <Check size={18} /> Entrega de Desarrollo
-              </button>
-            )}
+            {improvement.state === 'En Desarrollo' && user.role === 'Desarrollador' && (() => {
+              const completedTasks = improvement.tasks ? improvement.tasks.filter(t => t.status === 'Completada').length : 0;
+              const totalTasks = improvement.tasks ? improvement.tasks.length : 0;
+              const isFinished = totalTasks > 0 && completedTasks === totalTasks;
+              
+              return (
+                <button 
+                  className="btn btn-danger" 
+                  disabled={!isFinished}
+                  style={{
+                    width: '100%', 
+                    justifyContent: 'center', 
+                    height: '52px', 
+                    background: isFinished ? 'var(--danger-color)' : 'rgba(244, 63, 94, 0.2)', 
+                    color: isFinished ? 'white' : 'rgba(255,255,255,0.3)',
+                    cursor: isFinished ? 'pointer' : 'not-allowed',
+                    border: isFinished ? 'none' : '1px solid rgba(244, 63, 94, 0.2)'
+                  }} 
+                  onClick={() => setShowEmailModal(true)}
+                  title={!isFinished ? 'Debes completar todas las tareas (100%) antes de realizar la entrega.' : ''}
+                >
+                  <Check size={18} /> Entrega de Desarrollo {!isFinished && ` (${completedTasks}/${totalTasks})`}
+                </button>
+              );
+            })()}
 
             {improvement.state === 'Desarrollado' && (
               <button className="btn btn-primary" style={{width: '100%', justifyContent: 'center', height: '52px', background: 'var(--accent-color)'}} onClick={() => changeState('Socializado')}>
