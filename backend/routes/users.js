@@ -66,7 +66,7 @@ router.get('/:id/tasks', verifyToken, async (req, res) => {
       SELECT t.*, i.title as improvement_title, i.state as improvement_state
       FROM tasks t
       JOIN improvements i ON t.improvement_id = i.id
-      WHERE i.developer_id = ?
+      WHERE i.developer_id = ? AND i.state NOT IN ('Desarrollado', 'Socializado')
       ORDER BY t.start_date ASC
     `, [id]);
 
