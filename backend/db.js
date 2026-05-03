@@ -61,6 +61,7 @@ async function initDb() {
       improvement_id INT,
       description TEXT NOT NULL,
       status VARCHAR(50) DEFAULT 'Pendiente',
+      completed_at DATETIME,
       start_date DATETIME,
       end_date DATETIME,
       attachments TEXT,

@@ -16,7 +16,7 @@ export default function Dashboard() {
 
   const fetchImprovements = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/improvements');
+      const res = await axios.get('http://192.168.101.16:5000/api/improvements');
       setImprovements(res.data);
     } catch (error) {
       console.error(error);
@@ -145,15 +145,21 @@ export default function Dashboard() {
             </div>
 
             {imp.start_date && (
-              <div style={{marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
-                  <span style={{fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase'}}>Cronograma Ejecución</span>
-                  <span style={{fontSize: '11px', color: 'var(--primary-color)', fontWeight: 700}}>{imp.duration_hours}h totales</span>
+              <div style={{marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                  <span style={{fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase'}}>Progreso Técnico</span>
+                  <span style={{fontSize: '14px', fontWeight: 900, color: 'var(--primary-color)'}}>{imp.progress_percent || 0}%</span>
                 </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-color)'}}>
-                  <span>{new Date(imp.start_date).toLocaleDateString('es-CO')}</span>
-                  <span style={{color: 'var(--text-muted)'}}>→</span>
-                  <span>{new Date(imp.end_date).toLocaleDateString('es-CO')}</span>
+                <div style={{width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', marginBottom: '15px', overflow: 'hidden'}}>
+                  <div style={{width: `${imp.progress_percent || 0}%`, height: '100%', background: 'var(--primary-color)', boxShadow: '0 0 10px var(--primary-color)', transition: 'width 0.5s ease'}} />
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <span style={{fontSize: '11px'}}>{new Date(imp.start_date).toLocaleDateString('es-CO')}</span>
+                    <span style={{color: 'var(--text-muted)'}}>→</span>
+                    <span style={{fontSize: '11px'}}>{new Date(imp.end_date).toLocaleDateString('es-CO')}</span>
+                  </div>
+                  <span style={{fontSize: '11px', fontWeight: 800, color: 'var(--primary-color)'}}>{imp.duration_hours}H</span>
                 </div>
               </div>
             )}

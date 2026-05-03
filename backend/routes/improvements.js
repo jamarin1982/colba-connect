@@ -282,7 +282,8 @@ router.get('/', verifyToken, async (req, res) => {
       query = `
         SELECT i.*, u.name as creator_name, d.name as developer_name,
                MIN(t.start_date) as start_date, MAX(t.end_date) as end_date,
-               SUM(TIMESTAMPDIFF(HOUR, t.start_date, t.end_date)) as duration_hours
+               SUM(TIMESTAMPDIFF(HOUR, t.start_date, t.end_date)) as duration_hours,
+               IFNULL(ROUND(COUNT(CASE WHEN t.status = 'Completada' THEN 1 END) * 100 / COUNT(t.id)), 0) as progress_percent
         FROM improvements i
         JOIN users u ON i.creator_id = u.id
         LEFT JOIN users d ON i.developer_id = d.id
@@ -295,7 +296,8 @@ router.get('/', verifyToken, async (req, res) => {
       query = `
         SELECT i.*, u.name as creator_name, d.name as developer_name,
                MIN(t.start_date) as start_date, MAX(t.end_date) as end_date,
-               SUM(TIMESTAMPDIFF(HOUR, t.start_date, t.end_date)) as duration_hours
+               SUM(TIMESTAMPDIFF(HOUR, t.start_date, t.end_date)) as duration_hours,
+               IFNULL(ROUND(COUNT(CASE WHEN t.status = 'Completada' THEN 1 END) * 100 / COUNT(t.id)), 0) as progress_percent
         FROM improvements i
         JOIN users u ON i.creator_id = u.id
         LEFT JOIN users d ON i.developer_id = d.id
@@ -579,6 +581,28 @@ router.put('/:id/state', verifyToken, async (req, res) => {
     }
 
     res.json({ message: 'Estado actualizado a ' + state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Toggle task completion
+router.put('/tasks/:taskId/toggle', verifyToken, async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const [taskRows] = await db.execute('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    if (taskRows.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
+    
+    const task = taskRows[0];
+    const newStatus = task.status === 'Completada' ? 'Pendiente' : 'Completada';
+    const completedAt = newStatus === 'Completada' ? new Date() : null;
+
+    await db.execute(
+      'UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?',
+      [newStatus, completedAt, taskId]
+    );
+
+    res.json({ message: 'Tarea actualizada', status: newStatus });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

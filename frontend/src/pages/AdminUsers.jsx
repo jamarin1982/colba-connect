@@ -11,7 +11,7 @@ export default function AdminUsers() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/users');
+      const res = await axios.get('http://192.168.101.16:5000/api/users');
       setUsers(res.data);
     } catch (error) {
       console.error(error);
@@ -25,7 +25,7 @@ export default function AdminUsers() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/users', newUser);
+      await axios.post('http://192.168.101.16:5000/api/users', newUser);
       setShowModal(false);
       setNewUser({ name: '', email: '', password: '', role: 'Usuario' });
       fetchUsers();
@@ -37,7 +37,7 @@ export default function AdminUsers() {
 
   const toggleUserStatus = async (id, active, role) => {
     try {
-      await axios.put(`http://localhost:5000/api/users/${id}`, { active: active ? 0 : 1, role });
+      await axios.put(`http://192.168.101.16:5000/api/users/${id}`, { active: active ? 0 : 1, role });
       fetchUsers();
     } catch (error) {
       console.error(error);

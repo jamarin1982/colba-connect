@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Link } f
 import axios from 'axios';
 import { LogOut, Home, Users, PlusCircle, LayoutDashboard, CheckCircle2, Menu, X, Clock } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://192.168.101.16:5000/api';
 
 // Set up Axios interceptor
 axios.interceptors.request.use(config => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../App';
-import { Calendar, Clock, LayoutGrid, User, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, LayoutGrid, User, ExternalLink, CheckCircle2, Circle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DeveloperAgenda() {
@@ -11,20 +11,10 @@ export default function DeveloperAgenda() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user.role === 'Administrador') {
-      axios.get('http://localhost:5000/api/users')
-        .then(res => setDevelopers(res.data.filter(u => u.role === 'Desarrollador')))
-        .catch(console.error);
-    } else if (user.role === 'Desarrollador') {
-      setSelectedDevId(user.id);
-    }
-  }, [user]);
-
-  useEffect(() => {
+  const fetchTasks = () => {
     if (selectedDevId) {
       setLoading(true);
-      axios.get(`http://localhost:5000/api/users/${selectedDevId}/tasks`)
+      axios.get(`http://192.168.101.16:5000/api/users/${selectedDevId}/tasks`)
         .then(res => {
           setTasks(res.data);
           setLoading(false);
@@ -34,7 +24,30 @@ export default function DeveloperAgenda() {
           setLoading(false);
         });
     }
+  };
+
+  useEffect(() => {
+    if (user.role === 'Administrador') {
+      axios.get('http://192.168.101.16:5000/api/users')
+        .then(res => setDevelopers(res.data.filter(u => u.role === 'Desarrollador')))
+        .catch(console.error);
+    } else if (user.role === 'Desarrollador') {
+      setSelectedDevId(user.id);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchTasks();
   }, [selectedDevId]);
+
+  const toggleTask = async (taskId) => {
+    try {
+      await axios.put(`http://192.168.101.16:5000/api/improvements/tasks/${taskId}/toggle`);
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -82,33 +95,57 @@ export default function DeveloperAgenda() {
         <div style={{textAlign: 'center', padding: '40px'}}>Cargando agenda...</div>
       ) : (
         <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-          {tasks.map(task => (
-            <div key={task.id} className="glass-panel" style={{padding: '24px', borderLeft: '4px solid var(--primary-color)', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '20px'}}>
-              <div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
-                  <span className="badge badge-desarrollo" style={{fontSize: '9px'}}>Tarea Técnica</span>
-                  <Link to={`/improvement/${task.improvement_id}`} style={{fontSize: '12px', color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'}}>
-                    {task.improvement_title} <ExternalLink size={12} />
-                  </Link>
-                </div>
-                <h3 style={{fontSize: '18px', fontWeight: 600, marginBottom: '12px'}}>{task.description}</h3>
-                <div style={{display: 'flex', gap: '24px'}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
-                    <Calendar size={16} /> {new Date(task.start_date).toLocaleDateString('es-CO', { dateStyle: 'medium' })}
+          {tasks.map(task => {
+            const isDone = task.status === 'Completada';
+            return (
+              <div key={task.id} className="glass-panel agenda-item" style={{
+                borderLeft: `4px solid ${isDone ? '#10B981' : 'var(--primary-color)'}`, 
+                display: 'grid', 
+                gridTemplateColumns: 'auto 1fr auto', 
+                alignItems: 'center', 
+                gap: '20px',
+                opacity: isDone ? 0.7 : 1,
+                transition: 'all 0.3s ease'
+              }}>
+                <button 
+                  onClick={() => toggleTask(task.id)}
+                  style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center'}}
+                >
+                  {isDone ? <CheckCircle2 color="#10B981" size={28} /> : <Circle color="rgba(255,255,255,0.2)" size={28} />}
+                </button>
+                <div>
+                  <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
+                    <span className={`badge ${isDone ? 'badge-aprobado' : 'badge-desarrollo'}`} style={{fontSize: '9px'}}>
+                      {isDone ? 'Completada' : 'Tarea Técnica'}
+                    </span>
+                    <Link to={`/improvement/${task.improvement_id}`} style={{fontSize: '12px', color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'}}>
+                      {task.improvement_title} <ExternalLink size={12} />
+                    </Link>
+                    {isDone && task.completed_at && (
+                      <span style={{fontSize: '9px', color: '#10B981', fontWeight: 700}}>
+                        {new Date(task.completed_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    )}
                   </div>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
-                    <Clock size={16} /> {new Date(task.start_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} - {new Date(task.end_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                  <h3 style={{fontSize: '18px', fontWeight: 600, marginBottom: '12px', textDecoration: isDone ? 'line-through' : 'none'}}>{task.description}</h3>
+                  <div className="task-meta" style={{display: 'flex', gap: '24px'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
+                      <Calendar size={16} /> {new Date(task.start_date).toLocaleDateString('es-CO', { dateStyle: 'medium' })}
+                    </div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
+                      <Clock size={16} /> {new Date(task.start_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} - {new Date(task.end_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+                <div className="hours-badge" style={{textAlign: 'right'}}>
+                  <div style={{fontSize: '24px', fontWeight: 800, color: isDone ? '#10B981' : 'var(--text-color)'}}>
+                    {Math.round((new Date(task.end_date) - new Date(task.start_date)) / (1000 * 60 * 60))}
+                    <span style={{fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px'}}>HRS</span>
                   </div>
                 </div>
               </div>
-              <div style={{textAlign: 'right'}}>
-                <div style={{fontSize: '24px', fontWeight: 800, color: 'var(--text-color)'}}>
-                  {Math.round((new Date(task.end_date) - new Date(task.start_date)) / (1000 * 60 * 60))}
-                  <span style={{fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px'}}>HRS</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           
           {selectedDevId && tasks.length === 0 && (
             <div style={{textAlign: 'center', padding: '60px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed var(--glass-border)'}}>

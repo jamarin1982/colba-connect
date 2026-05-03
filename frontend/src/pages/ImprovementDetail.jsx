@@ -20,7 +20,7 @@ export default function ImprovementDetail() {
 
   const fetchImprovement = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/improvements/${id}`);
+      const res = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
       setImprovement(res.data);
     } catch (error) {
       
@@ -30,7 +30,7 @@ export default function ImprovementDetail() {
   useEffect(() => {
     fetchImprovement();
     if (user.role === 'Administrador') {
-      axios.get('http://localhost:5000/api/users')
+      axios.get('http://192.168.101.16:5000/api/users')
         .then(res => setDevList(res.data.filter(u => u.role === 'Desarrollador')))
         .catch(console.error);
     }
@@ -54,7 +54,7 @@ export default function ImprovementDetail() {
     }
 
     try {
-      await axios.post(`http://localhost:5000/api/improvements/${id}/tasks`, formData, {
+      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/tasks`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setNewTask('');
@@ -70,7 +70,7 @@ export default function ImprovementDetail() {
   const deleteTask = async (taskId) => {
     if (!window.confirm('¿Eliminar esta tarea?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/improvements/tasks/${taskId}`);
+      await axios.delete(`http://192.168.101.16:5000/api/improvements/tasks/${taskId}`);
       fetchImprovement();
     } catch (error) {
       
@@ -79,7 +79,7 @@ export default function ImprovementDetail() {
 
   const changeState = async (newState, emails = [], developerId = null) => {
     try {
-      await axios.put(`http://localhost:5000/api/improvements/${id}/state`, { 
+      await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, { 
         state: newState, 
         emails,
         developerId 
