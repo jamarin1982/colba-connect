@@ -1,0 +1,299 @@
+import React, { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../App';
+import { ArrowLeft, Check, Play, Send, Plus, Trash2 } from 'lucide-react';
+
+export default function ImprovementDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const [improvement, setImprovement] = useState(null);
+  const [newTask, setNewTask] = useState('');
+  const [taskStartDate, setTaskStartDate] = useState('');
+  const [taskEndDate, setTaskEndDate] = useState('');
+  const [taskFiles, setTaskFiles] = useState([]);
+  const [socializationEmails, setSocializationEmails] = useState('');
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [devList, setDevList] = useState([]);
+  const [selectedDev, setSelectedDev] = useState('');
+
+  const fetchImprovement = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/improvements/${id}`);
+      setImprovement(res.data);
+    } catch (error) {
+      
+    }
+  };
+
+  useEffect(() => {
+    fetchImprovement();
+    if (user.role === 'Administrador') {
+      axios.get('http://localhost:5000/api/users')
+        .then(res => setDevList(res.data.filter(u => u.role === 'Desarrollador')))
+        .catch(console.error);
+    }
+  }, [id, user.role]);
+
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (!newTask) return;
+    
+    if (new Date(taskEndDate) <= new Date(taskStartDate)) {
+      alert('La fecha de fin debe ser posterior a la de inicio');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('description', newTask);
+    formData.append('startDate', taskStartDate);
+    formData.append('endDate', taskEndDate);
+    for (let i = 0; i < taskFiles.length; i++) {
+      formData.append('attachments', taskFiles[i]);
+    }
+
+    try {
+      await axios.post(`http://localhost:5000/api/improvements/${id}/tasks`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setNewTask('');
+      setTaskStartDate('');
+      setTaskEndDate('');
+      setTaskFiles([]);
+      fetchImprovement();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error al registrar tarea');
+    }
+  };
+
+  const deleteTask = async (taskId) => {
+    if (!window.confirm('¿Eliminar esta tarea?')) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/improvements/tasks/${taskId}`);
+      fetchImprovement();
+    } catch (error) {
+      
+    }
+  };
+
+  const changeState = async (newState, emails = [], developerId = null) => {
+    try {
+      await axios.put(`http://localhost:5000/api/improvements/${id}/state`, { 
+        state: newState, 
+        emails,
+        developerId 
+      });
+      setShowEmailModal(false);
+      fetchImprovement();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error al cambiar estado');
+    }
+  };
+
+  const handleDesarrollado = (e) => {
+    e.preventDefault();
+    const emailList = socializationEmails.split(',').map(e => e.trim()).filter(e => e);
+    changeState('Desarrollado', emailList);
+  };
+
+  const deleteImprovement = async () => {
+    if (!window.confirm('¿Estás seguro de que quieres cancelar y eliminar esta mejora? Se enviará un correo notificando a los participantes del levantamiento.')) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/improvements/${id}`);
+      navigate('/');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error al procesar');
+    }
+  };
+
+  if (!improvement) return <div style={{padding: '40px', textAlign: 'center'}}>Cargando...</div>;
+
+  return (
+    <div className="animate-fade-in">
+      <button className="btn btn-outline" style={{marginBottom: '20px', border: 'none'}} onClick={() => navigate(-1)}>
+        <ArrowLeft size={18} /> Volver
+      </button>
+
+      <div className="glass-panel" style={{marginBottom: '24px'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px'}}>
+          <h2 style={{fontSize: '28px', color: 'var(--text-color)'}}>{improvement.title}</h2>
+          <span className={`badge badge-${improvement.state.toLowerCase().replace(' ', '-')}`} style={{fontSize: '14px', padding: '6px 12px'}}>
+            {improvement.state}
+          </span>
+        </div>
+        <div style={{display: 'flex', gap: '20px', marginBottom: '20px', fontSize: '14px'}}>
+           <span style={{color: 'var(--text-muted)'}}>Solicitado por: <b>{improvement.creator_name}</b></span>
+           {improvement.meeting_date && (
+             <span style={{color: 'var(--text-muted)'}}>Reunión de Levantamiento: <b>{new Date(improvement.meeting_date).toLocaleString('es-CO')}</b></span>
+           )}
+        </div>
+        <p style={{color: 'var(--text-muted)', fontSize: '16px', lineHeight: 1.6}}>{improvement.description}</p>
+      </div>
+
+      <div className="detail-grid" style={{display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '30px', alignItems: 'start'}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: '30px'}}>
+          {/* TASK CREATION SECTION - Only for assigned developer */}
+          {improvement.state === 'Desarrollador Asignado' && improvement.developer_id === user.id && (
+            <div className="glass-panel" style={{padding: '30px'}}>
+              <h2 style={{fontSize: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                <Plus size={24} color="var(--primary-color)" /> Definición de Tarea Técnica
+              </h2>
+              <form onSubmit={addTask} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+                <input type="text" className="input-control" placeholder="Descripción de la tarea..." value={newTask} onChange={e => setNewTask(e.target.value)} required />
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'}}>
+                  <input type="datetime-local" className="input-control" value={taskStartDate} onChange={e => setTaskStartDate(e.target.value)} />
+                  <input type="datetime-local" className="input-control" value={taskEndDate} onChange={e => setTaskEndDate(e.target.value)} />
+                </div>
+                <input type="file" className="input-control" multiple onChange={e => setTaskFiles(e.target.files)} />
+                <button type="submit" className="btn btn-primary">Registrar Tarea</button>
+              </form>
+            </div>
+          )}
+
+          <div className="glass-panel" style={{padding: '32px'}}>
+            <h3 style={{marginBottom: '24px', fontSize: '22px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <Plus size={24} style={{color: 'var(--primary-color)'}} /> Plan de Ejecución ({improvement.tasks?.length || 0})
+            </h3>
+            
+            <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+              {improvement.tasks?.map(task => {
+                let attachments = [];
+                try { attachments = task.attachments ? JSON.parse(task.attachments) : []; } catch(e) {}
+                
+                return (
+                  <div key={task.id} className="glass-panel" style={{padding: '20px', background: 'rgba(255,255,255,0.01)', borderLeft: '4px solid var(--primary-color)'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
+                      <p style={{fontWeight: 600, fontSize: '16px', color: 'var(--text-color)'}}>{task.description}</p>
+                      {improvement.state === 'Desarrollador Asignado' && improvement.developer_id === user.id && (
+                        <button onClick={() => deleteTask(task.id)} style={{background: 'rgba(244, 63, 94, 0.1)', border: 'none', color: '#F43F5E', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex'}}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div style={{display: 'flex', gap: '24px', marginBottom: '16px', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', width: 'fit-content'}}>
+                      {task.start_date && (
+                        <div style={{fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase'}}>
+                          <span style={{color: 'var(--primary-color)', marginRight: '4px'}}>●</span> Inicio: <span style={{color: 'var(--text-color)'}}>{new Date(task.start_date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                      )}
+                      {task.end_date && (
+                        <div style={{fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase'}}>
+                          <span style={{color: 'var(--accent-color)', marginRight: '4px'}}>●</span> Fin: <span style={{color: 'var(--text-color)'}}>{new Date(task.end_date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{padding: '32px', position: 'sticky', top: '48px'}}>
+          <h3 style={{marginBottom: '24px', fontSize: '20px', fontWeight: 600, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px'}}>
+            Panel de Control
+          </h3>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+            {improvement.state === 'Solicitado' && (user.id === improvement.creator_id || user.role === 'Administrador') && (
+              <button className="btn btn-outline" style={{borderColor: 'rgba(244, 63, 94, 0.4)', color: '#F43F5E', width: '100%', justifyContent: 'center'}} onClick={deleteImprovement}>
+                <Trash2 size={18} /> Cancelar Iniciativa
+              </button>
+            )}
+
+            {/* Admin: Assign/Change Developer */}
+            {['Solicitado', 'Desarrollador Asignado', 'Tareas Asignadas', 'Aprobado'].includes(improvement.state) && user.role === 'Administrador' && (
+              <div style={{padding: '20px', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: '1px solid var(--primary-color)', marginBottom: '20px'}}>
+                <label style={{display: 'block', fontSize: '12px', color: 'var(--primary-color)', marginBottom: '10px', fontWeight: 700, textTransform: 'uppercase'}}>{improvement.developer_id ? 'Cambiar Desarrollador' : 'Desarrollador Asignado'}</label>
+                <select 
+                  className="input-control" 
+                  value={selectedDev} 
+                  onChange={(e) => setSelectedDev(e.target.value)}
+                  style={{marginBottom: '15px'}}
+                >
+                  <option value="">Seleccione un desarrollador...</option>
+                  {devList.map(dev => (
+                    <option key={dev.id} value={dev.id}>{dev.name} ({dev.email})</option>
+                  ))}
+                </select>
+                <button 
+                  className="btn btn-primary" 
+                  style={{width: '100%'}} 
+                  onClick={() => changeState('Desarrollador Asignado', [], selectedDev)}
+                >
+                  {improvement.developer_id ? 'Confirmar Cambio' : 'Confirmar Asignación'}
+                </button>
+              </div>
+            )}
+
+
+            {/* Developer: Finalize Task Assignment */}
+            {improvement.state === 'Desarrollador Asignado' && improvement.developer_id === user.id && (
+              <button className="btn btn-primary" style={{width: '100%', marginBottom: '15px', padding: '16px'}} onClick={() => changeState('Tareas Asignadas')}>
+                <Send size={18} /> Finalizar Asignación de Tareas
+              </button>
+            )}
+
+            {improvement.state === 'Tareas Asignadas' && (user.role === 'Usuario' || user.role === 'Desarrollador') && user.id === improvement.creator_id && (
+              <button className="btn btn-success" style={{width: '100%', justifyContent: 'center', height: '52px'}} onClick={() => changeState('Aprobado')}>
+                <Check size={18} /> Aprobar Plan de Trabajo
+              </button>
+            )}
+
+            {improvement.state === 'Aprobado' && user.role === 'Desarrollador' && (
+              <button className="btn btn-warning" style={{width: '100%', justifyContent: 'center', height: '52px'}} onClick={() => changeState('En Desarrollo')}>
+                <Play size={18} /> Iniciar Desarrollo
+              </button>
+            )}
+
+            {improvement.state === 'En Desarrollo' && user.role === 'Desarrollador' && (
+              <button className="btn btn-danger" style={{width: '100%', justifyContent: 'center', height: '52px', background: 'var(--danger-color)', color: 'white'}} onClick={() => setShowEmailModal(true)}>
+                <Check size={18} /> Entrega de Desarrollo
+              </button>
+            )}
+
+            {improvement.state === 'Desarrollado' && (
+              <button className="btn btn-primary" style={{width: '100%', justifyContent: 'center', height: '52px', background: 'var(--accent-color)'}} onClick={() => changeState('Socializado')}>
+                <Send size={18} /> Socializar Iniciativa
+              </button>
+            )}
+            
+            {improvement.state === 'Socializado' && (
+              <div style={{background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.2)'}}>
+                <CheckCircle2 size={32} style={{margin: '0 auto 12px'}} />
+                <p style={{fontWeight: 600, fontSize: '14px'}}>Proyecto Implementado</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showEmailModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div className="glass-panel animate-fade-in" style={{width: '100%', maxWidth: '500px'}}>
+            <h2 style={{marginBottom: '20px'}}>Finalizar Desarrollo</h2>
+            <form onSubmit={handleDesarrollado}>
+              <div className="input-group">
+                <label>Correos para Socialización (separados por coma)</label>
+                <input 
+                  type="text" 
+                  className="input-control" 
+                  value={socializationEmails} 
+                  onChange={e => setSocializationEmails(e.target.value)} 
+                  placeholder="ejemplo1@empresa.com, ejemplo2@empresa.com" 
+                  required 
+                />
+              </div>
+              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px'}}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowEmailModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">Terminar y Crear Evento</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// force reload
