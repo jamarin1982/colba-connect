@@ -324,7 +324,9 @@ export default function ImprovementDetail() {
             <h2 style={{marginBottom: '20px'}}>Finalizar Desarrollo</h2>
             <form onSubmit={handleDesarrollado} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
               <div>
-                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Fecha y Hora de Socialización</label>
+                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>
+                  Fecha y Hora de Socialización <span style={{color: '#F43F5E'}}>*</span>
+                </label>
                 <input 
                   type="datetime-local" 
                   className="input-control" 
