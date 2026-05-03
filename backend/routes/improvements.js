@@ -538,7 +538,7 @@ router.delete('/tasks/:id', verifyToken, async (req, res) => {
 });
 
 // Change state
-router.put('/:id/state', verifyToken, async (req, res) => {
+router.put('/:id/state', verifyToken, upload.array('technicalDocs'), async (req, res) => {
   try {
     const { id } = req.params;
     const { state, emails } = req.body;
@@ -676,9 +676,20 @@ router.put('/:id/state', verifyToken, async (req, res) => {
       // 2. Add extra emails from request
       if (emails && Array.isArray(emails)) {
         emails.forEach(e => stakeholderEmails.add(e));
+      } else if (emails && typeof emails === 'string') {
+        // Handle case where emails is a comma-separated string from FormData
+        emails.split(',').map(e => e.trim()).filter(e => e).forEach(e => stakeholderEmails.add(e));
       }
 
       const finalEmailList = Array.from(stakeholderEmails);
+
+      // 3. Handle Technical Documentation Uploads
+      let technicalDocsJson = null;
+      if (req.files && req.files.length > 0) {
+        const docs = req.files.map(file => `/uploads/${file.filename}`);
+        technicalDocsJson = JSON.stringify(docs);
+        await db.execute('UPDATE improvements SET technical_docs = ? WHERE id = ?', [technicalDocsJson, id]);
+      }
 
       if (finalEmailList.length > 0) {
         for (const email of finalEmailList) {
