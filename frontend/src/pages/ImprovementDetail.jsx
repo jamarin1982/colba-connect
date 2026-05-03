@@ -15,7 +15,6 @@ export default function ImprovementDetail() {
   const [taskFiles, setTaskFiles] = useState([]);
   const [socializationEmails, setSocializationEmails] = useState('');
   const [socializationDate, setSocializationDate] = useState('');
-  const [technicalDocs, setTechnicalDocs] = useState([]);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [devList, setDevList] = useState([]);
   const [selectedDev, setSelectedDev] = useState('');
@@ -68,28 +67,15 @@ export default function ImprovementDetail() {
     }
   };
 
-  const changeState = async (newState, emails = [], developerId = null, meetingDate = null, files = []) => {
+  const changeState = async (newState, emails = [], developerId = null, meetingDate = null) => {
     try {
-      if (files && files.length > 0) {
-        const formData = new FormData();
-        formData.append('state', newState);
-        formData.append('emails', emails.join(', '));
-        if (developerId) formData.append('developerId', developerId);
-        if (meetingDate) formData.append('meetingDate', meetingDate);
-        for (let i = 0; i < files.length; i++) {
-          formData.append('technicalDocs', files[i]);
-        }
-        await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, formData);
-      } else {
-        await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, { 
-          state: newState, 
-          emails,
-          developerId,
-          meetingDate
-        });
-      }
+      await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, { 
+        state: newState, 
+        emails,
+        developerId,
+        meetingDate
+      });
       setShowEmailModal(false);
-      setTechnicalDocs([]);
       fetchImprovement();
     } catch (error) {
       alert(error.response?.data?.error || 'Error al cambiar estado');
@@ -103,7 +89,7 @@ export default function ImprovementDetail() {
       return;
     }
     const emailList = socializationEmails.split(',').map(e => e.trim()).filter(e => e);
-    changeState('Desarrollado', emailList, null, socializationDate, technicalDocs);
+    changeState('Desarrollado', emailList, null, socializationDate);
   };
 
   const deleteImprovement = async () => {
@@ -239,26 +225,6 @@ export default function ImprovementDetail() {
             Panel de Control
           </h3>
           <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-            {improvement.technical_docs && (
-              <div style={{padding: '20px', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.2)', marginBottom: '16px'}}>
-                <h4 style={{fontSize: '12px', color: 'var(--primary-color)', marginBottom: '12px', textTransform: 'uppercase', fontWeight: 800}}>Documentación Técnica</h4>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  {JSON.parse(improvement.technical_docs).map((doc, i) => (
-                    <a 
-                      key={i} 
-                      href={`http://192.168.101.16:5000${doc}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-outline"
-                      style={{fontSize: '11px', padding: '8px 12px', justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)'}}
-                    >
-                      <Plus size={14} /> Ver Documento {i + 1}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {improvement.state === 'Solicitado' && (user.id === improvement.creator_id || user.role === 'Administrador') && (
               <button className="btn btn-outline" style={{borderColor: 'rgba(244, 63, 94, 0.4)', color: '#F43F5E', width: '100%', justifyContent: 'center'}} onClick={deleteImprovement}>
                 <Trash2 size={18} /> Cancelar Iniciativa
@@ -386,17 +352,6 @@ export default function ImprovementDetail() {
                 <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px'}}>
                   <b>Nota:</b> El creador, desarrollador y administradores ya están incluidos automáticamente. Use este campo solo para invitados extra.
                 </p>
-              </div>
-              <div>
-                <label style={{display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '8px', textTransform: 'uppercase'}}>Documentación Técnica (Manuales/Diagramas)</label>
-                <input 
-                  type="file" 
-                  className="input-control" 
-                  multiple 
-                  onChange={e => setTechnicalDocs(e.target.files)} 
-                  style={{padding: '10px'}}
-                />
-                <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px'}}>Suba manuales, diagramas o guías técnicas para centralizar el conocimiento.</p>
               </div>
               <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px'}}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowEmailModal(false)}>Cancelar</button>
