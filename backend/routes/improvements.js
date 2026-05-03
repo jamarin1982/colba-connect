@@ -678,4 +678,48 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Background Overdue Task Checker
+const checkOverdueTasks = async () => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT t.*, i.title as improvement_title, u.email as creator_email, d.email as dev_email
+      FROM tasks t
+      JOIN improvements i ON t.improvement_id = i.id
+      JOIN users u ON i.creator_id = u.id
+      LEFT JOIN users d ON i.developer_id = d.id
+      WHERE t.status != 'Completada' 
+      AND t.end_date < NOW() 
+      AND t.overdue_notified = 0
+    `);
+
+    for (const task of rows) {
+      const [adminRows] = await db.execute("SELECT email FROM users WHERE role = 'Administrador'");
+      const adminEmails = adminRows.map(a => a.email);
+      
+      const emailSet = new Set(adminEmails);
+      if (task.creator_email) emailSet.add(task.creator_email);
+      if (task.dev_email) emailSet.add(task.dev_email);
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER || 'no_responder@grupocolba.com',
+        to: Array.from(emailSet).join(', '),
+        subject: `⚠️ TAREA VENCIDA: ${task.improvement_title}`,
+        text: `Le informamos que la siguiente tarea técnica ha superado su fecha de vencimiento:\n\n` +
+              `MEJORA: ${task.improvement_title}\n` +
+              `TAREA: ${task.description}\n` +
+              `FECHA VENCIMIENTO: ${new Date(task.end_date).toLocaleString('es-CO')}\n\n` +
+              `Por favor, revisar el estado de esta tarea en el portal.`
+      });
+
+      await db.execute('UPDATE tasks SET overdue_notified = 1 WHERE id = ?', [task.id]);
+      console.log(`[ALERTA] Correo de tarea vencida enviado para ID: ${task.id}`);
+    }
+  } catch (err) {
+    console.error('Error in overdue checker:', err.message);
+  }
+};
+
+// Start checking every 5 minutes
+setInterval(checkOverdueTasks, 5 * 60 * 1000);
+
 module.exports = router;

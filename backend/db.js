@@ -65,6 +65,7 @@ async function initDb() {
       start_date DATETIME,
       end_date DATETIME,
       attachments TEXT,
+      overdue_notified BOOLEAN DEFAULT 0,
       FOREIGN KEY (improvement_id) REFERENCES improvements(id)
     )`);
 
