@@ -16,6 +16,7 @@ export default function ImprovementDetail() {
   const [socializationEmails, setSocializationEmails] = useState('');
   const [socializationDate, setSocializationDate] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [devList, setDevList] = useState([]);
   const [selectedDev, setSelectedDev] = useState('');
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
