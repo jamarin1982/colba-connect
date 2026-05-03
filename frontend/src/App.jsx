@@ -20,6 +20,8 @@ import Dashboard from './pages/Dashboard';
 import ImprovementDetail from './pages/ImprovementDetail';
 import AdminUsers from './pages/AdminUsers';
 import DeveloperAgenda from './pages/DeveloperAgenda';
+import Metrics from './pages/Metrics';
+import { BarChart3 } from 'lucide-react';
 
 export const AuthContext = React.createContext(null);
 
@@ -80,6 +82,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/improvement/:id" element={<ImprovementDetail />} />
                 <Route path="/agenda" element={<DeveloperAgenda />} />
+                {(user.role === 'Administrador' || user.role === 'Auditor') && <Route path="/metrics" element={<Metrics />} />}
                 {user.role === 'Administrador' && <Route path="/users" element={<AdminUsers />} />}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
@@ -110,6 +113,11 @@ function Sidebar({ user, logout, isOpen, close }) {
         <Link to="/" className="nav-link" onClick={close}>
           <Home size={20} /> Dashboard
         </Link>
+        {(user.role === 'Administrador' || user.role === 'Auditor') && (
+          <Link to="/metrics" className="nav-link" onClick={close}>
+            <BarChart3 size={20} /> Métricas
+          </Link>
+        )}
         {(user.role === 'Administrador' || user.role === 'Desarrollador') && (
           <Link to="/agenda" className="nav-link" onClick={close}>
             <Clock size={20} /> Agenda
