@@ -340,8 +340,8 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { title, description, emails, meetingDate } = req.body;
-    if (!meetingDate) {
-      return res.status(400).json({ error: 'La fecha y hora de la reunión de levantamiento es obligatoria.' });
+    if (!meetingDate || new Date(meetingDate) < new Date()) {
+      return res.status(400).json({ error: 'La fecha de levantamiento no puede ser anterior a la actual.' });
     }
     const state = 'Solicitado';
     
@@ -584,7 +584,9 @@ router.put('/:id/state', verifyToken, async (req, res) => {
       }
 
       const { meetingDate } = req.body;
-      if (!meetingDate) return res.status(400).json({ error: 'Debes programar la fecha de socialización para la entrega.' });
+      if (!meetingDate || new Date(meetingDate) < new Date()) {
+        return res.status(400).json({ error: 'La fecha de socialización no puede ser anterior a la actual.' });
+      }
 
       // 1. Gather default stakeholders
       const [creatorRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.creator_id]);

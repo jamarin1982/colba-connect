@@ -333,6 +333,7 @@ export default function ImprovementDetail() {
                   value={socializationDate} 
                   onChange={e => setSocializationDate(e.target.value)} 
                   required 
+                  min={new Date().toISOString().slice(0, 16)}
                 />
               </div>
               <div>
