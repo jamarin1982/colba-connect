@@ -162,17 +162,40 @@ export default function ImprovementDetail() {
                 try { attachments = task.attachments ? JSON.parse(task.attachments) : []; } catch(e) {}
                 
                 return (
-                  <div key={task.id} className="glass-panel" style={{padding: '20px', background: 'rgba(255,255,255,0.01)', borderLeft: '4px solid var(--primary-color)'}}>
+                  <div key={task.id} className="glass-panel" style={{
+                    padding: '20px', 
+                    background: 'rgba(255,255,255,0.01)', 
+                    borderLeft: `4px solid ${task.status === 'Completada' ? '#10B981' : 'var(--primary-color)'}`,
+                    opacity: task.status === 'Completada' ? 0.7 : 1,
+                    transition: 'all 0.3s ease',
+                    marginBottom: '12px'
+                  }}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
-                      <p style={{fontWeight: 600, fontSize: '16px', color: 'var(--text-color)'}}>{task.description}</p>
-                      {improvement.state === 'Desarrollador Asignado' && improvement.developer_id === user.id && (
-                        <button onClick={() => deleteTask(task.id)} style={{background: 'rgba(244, 63, 94, 0.1)', border: 'none', color: '#F43F5E', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex'}}>
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      <div>
+                        <p style={{fontWeight: 600, fontSize: '16px', color: 'var(--text-color)', textDecoration: task.status === 'Completada' ? 'line-through' : 'none'}}>{task.description}</p>
+                        {task.status === 'Completada' && task.completed_at && (
+                          <div style={{fontSize: '9px', color: '#10B981', fontWeight: 700, marginTop: '4px'}}>
+                            REALIZADA EL: {new Date(task.completed_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        {task.status === 'Completada' ? (
+                          <span className="badge badge-aprobado" style={{fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                            <Check size={10} /> Realizada
+                          </span>
+                        ) : (
+                          <span className="badge badge-tareas" style={{fontSize: '9px'}}>Pendiente</span>
+                        )}
+                        {improvement.state === 'Desarrollador Asignado' && improvement.developer_id === user.id && (
+                          <button onClick={() => deleteTask(task.id)} style={{background: 'rgba(244, 63, 94, 0.1)', border: 'none', color: '#F43F5E', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex'}}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
-                    <div style={{display: 'flex', gap: '24px', marginBottom: '16px', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', width: 'fit-content'}}>
+                    <div style={{display: 'flex', gap: '24px', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', width: 'fit-content'}}>
                       {task.start_date && (
                         <div style={{fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase'}}>
                           <span style={{color: 'var(--primary-color)', marginRight: '4px'}}>●</span> Inicio: <span style={{color: 'var(--text-color)'}}>{new Date(task.start_date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</span>
