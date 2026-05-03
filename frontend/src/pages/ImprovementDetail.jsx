@@ -161,29 +161,40 @@ export default function ImprovementDetail() {
                 let attachments = [];
                 try { attachments = task.attachments ? JSON.parse(task.attachments) : []; } catch(e) {}
                 
+                const isDone = task.status === 'Completada';
+                const isOverdue = !isDone && task.end_date && new Date(task.end_date) < new Date();
+                
                 return (
                   <div key={task.id} className="glass-panel" style={{
                     padding: '20px', 
                     background: 'rgba(255,255,255,0.01)', 
-                    borderLeft: `4px solid ${task.status === 'Completada' ? '#10B981' : 'var(--primary-color)'}`,
-                    opacity: task.status === 'Completada' ? 0.7 : 1,
+                    borderLeft: `4px solid ${isDone ? '#10B981' : (isOverdue ? '#F43F5E' : 'var(--primary-color)')}`,
+                    opacity: isDone ? 0.7 : 1,
                     transition: 'all 0.3s ease',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    boxShadow: isOverdue ? '0 0 15px rgba(244, 63, 94, 0.1)' : 'none'
                   }}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
                       <div>
-                        <p style={{fontWeight: 600, fontSize: '16px', color: 'var(--text-color)', textDecoration: task.status === 'Completada' ? 'line-through' : 'none'}}>{task.description}</p>
-                        {task.status === 'Completada' && task.completed_at && (
+                        <p style={{fontWeight: 600, fontSize: '16px', color: isOverdue ? '#F43F5E' : 'var(--text-color)', textDecoration: isDone ? 'line-through' : 'none'}}>{task.description}</p>
+                        {isDone && task.completed_at && (
                           <div style={{fontSize: '9px', color: '#10B981', fontWeight: 700, marginTop: '4px'}}>
                             REALIZADA EL: {new Date(task.completed_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
                           </div>
                         )}
+                        {isOverdue && (
+                          <div style={{fontSize: '9px', color: '#F43F5E', fontWeight: 800, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                            ⚠️ Tarea con retraso
+                          </div>
+                        )}
                       </div>
                       <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                        {task.status === 'Completada' ? (
+                        {isDone ? (
                           <span className="badge badge-aprobado" style={{fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px'}}>
                             <Check size={10} /> Realizada
                           </span>
+                        ) : isOverdue ? (
+                          <span className="badge badge-desarrollado" style={{fontSize: '9px', background: 'rgba(244, 63, 94, 0.2)', border: '1px solid #F43F5E'}}>Vencida</span>
                         ) : (
                           <span className="badge badge-tareas" style={{fontSize: '9px'}}>Pendiente</span>
                         )}
@@ -202,8 +213,8 @@ export default function ImprovementDetail() {
                         </div>
                       )}
                       {task.end_date && (
-                        <div style={{fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase'}}>
-                          <span style={{color: 'var(--accent-color)', marginRight: '4px'}}>●</span> Fin: <span style={{color: 'var(--text-color)'}}>{new Date(task.end_date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        <div style={{fontSize: '11px', color: isOverdue ? '#F43F5E' : 'var(--text-muted)', textTransform: 'uppercase'}}>
+                          <span style={{color: isOverdue ? '#F43F5E' : 'var(--accent-color)', marginRight: '4px'}}>●</span> Fin: <span style={{color: isOverdue ? '#F43F5E' : 'var(--text-color)', fontWeight: isOverdue ? 700 : 400}}>{new Date(task.end_date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</span>
                         </div>
                       )}
                     </div>

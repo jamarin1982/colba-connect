@@ -97,15 +97,18 @@ export default function DeveloperAgenda() {
         <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
           {tasks.map(task => {
             const isDone = task.status === 'Completada';
+            const isOverdue = !isDone && task.end_date && new Date(task.end_date) < new Date();
+            
             return (
               <div key={task.id} className="glass-panel agenda-item" style={{
-                borderLeft: `4px solid ${isDone ? '#10B981' : 'var(--primary-color)'}`, 
+                borderLeft: `4px solid ${isDone ? '#10B981' : (isOverdue ? '#F43F5E' : 'var(--primary-color)')}`, 
                 display: 'grid', 
                 gridTemplateColumns: 'auto 1fr auto', 
                 alignItems: 'center', 
                 gap: '20px',
                 opacity: isDone ? 0.7 : 1,
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                boxShadow: isOverdue ? '0 0 15px rgba(244, 63, 94, 0.1)' : 'none'
               }}>
                 <button 
                   onClick={() => toggleTask(task.id)}
@@ -121,12 +124,12 @@ export default function DeveloperAgenda() {
                   }}
                   title={task.improvement_state !== 'En Desarrollo' ? 'Solo se pueden marcar tareas cuando la mejora está "En Desarrollo"' : ''}
                 >
-                  {isDone ? <CheckCircle2 color="#10B981" size={28} /> : <Circle color="rgba(255,255,255,0.2)" size={28} />}
+                  {isDone ? <CheckCircle2 color="#10B981" size={28} /> : <Circle color={isOverdue ? '#F43F5E' : "rgba(255,255,255,0.2)"} size={28} />}
                 </button>
                 <div>
                   <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
-                    <span className={`badge ${isDone ? 'badge-aprobado' : 'badge-desarrollo'}`} style={{fontSize: '9px'}}>
-                      {isDone ? 'Completada' : 'Tarea Técnica'}
+                    <span className={`badge ${isDone ? 'badge-aprobado' : (isOverdue ? 'badge-desarrollado' : 'badge-desarrollo')}`} style={{fontSize: '9px', background: isOverdue ? 'rgba(244, 63, 94, 0.2)' : '', borderColor: isOverdue ? '#F43F5E' : ''}}>
+                      {isDone ? 'Completada' : (isOverdue ? 'Vencida' : 'Tarea Técnica')}
                     </span>
                     <Link to={`/improvement/${task.improvement_id}`} style={{fontSize: '12px', color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'}}>
                       {task.improvement_title} <ExternalLink size={12} />
@@ -136,19 +139,22 @@ export default function DeveloperAgenda() {
                         {new Date(task.completed_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     )}
+                    {isOverdue && (
+                      <span style={{fontSize: '9px', color: '#F43F5E', fontWeight: 800, textTransform: 'uppercase'}}>⚠️ Retrasada</span>
+                    )}
                   </div>
-                  <h3 style={{fontSize: '18px', fontWeight: 600, marginBottom: '12px', textDecoration: isDone ? 'line-through' : 'none'}}>{task.description}</h3>
+                  <h3 style={{fontSize: '18px', fontWeight: 600, marginBottom: '12px', textDecoration: isDone ? 'line-through' : 'none', color: isOverdue ? '#F43F5E' : 'var(--text-color)'}}>{task.description}</h3>
                   <div className="task-meta" style={{display: 'flex', gap: '24px'}}>
                     <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
                       <Calendar size={16} /> {new Date(task.start_date).toLocaleDateString('es-CO', { dateStyle: 'medium' })}
                     </div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: isOverdue ? '#F43F5E' : 'var(--text-muted)'}}>
                       <Clock size={16} /> {new Date(task.start_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} - {new Date(task.end_date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
                 <div className="hours-badge" style={{textAlign: 'right'}}>
-                  <div style={{fontSize: '24px', fontWeight: 800, color: isDone ? '#10B981' : 'var(--text-color)'}}>
+                  <div style={{fontSize: '24px', fontWeight: 800, color: isDone ? '#10B981' : (isOverdue ? '#F43F5E' : 'var(--text-color)')}}>
                     {Math.round((new Date(task.end_date) - new Date(task.start_date)) / (1000 * 60 * 60))}
                     <span style={{fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px'}}>HRS</span>
                   </div>
