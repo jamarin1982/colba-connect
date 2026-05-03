@@ -269,6 +269,21 @@ const sendAprobadoEmail = async (improvementName, description, tasks, emails) =>
   }
 };
 
+// Function to send "In Development" email
+const sendEnDesarrolloEmail = async (improvementName, emails) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER || 'no_responder@grupocolba.com',
+      to: emails.join(', '),
+      subject: `INICIO DE DESARROLLO: ${improvementName}`,
+      text: `Le informamos que se ha dado inicio formal al desarrollo técnico de la mejora: "${improvementName}".\n\nEl desarrollador asignado ya se encuentra trabajando en las tareas programadas.`
+    });
+    console.log(`[EMAIL ENVIADO] Inicio de Desarrollo`);
+  } catch (err) {
+    console.error('Error enviando correo de inicio de desarrollo:', err.message);
+  }
+};
+
 // Get all improvements based on role
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -541,15 +556,17 @@ router.put('/:id/state', verifyToken, async (req, res) => {
 
     if (state === 'En Desarrollo') {
       const [creatorRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.creator_id]);
-      const [collaboratorRows] = await db.execute("SELECT email FROM event_emails WHERE improvement_id = ? AND event_type = 'Levantamiento'", [id]);
-      
-      const allEmails = new Set();
-      if (creatorRows[0]?.email) allEmails.add(creatorRows[0].email);
-      collaboratorRows.forEach(row => allEmails.add(row.email));
+      const [devRows] = await db.execute('SELECT email FROM users WHERE id = ?', [improvement.developer_id]);
+      const [adminRows] = await db.execute("SELECT email FROM users WHERE role = 'Administrador'");
+      const [attendeeRows] = await db.execute("SELECT email FROM event_emails WHERE improvement_id = ? AND event_type = 'Levantamiento'", [id]);
 
-      if (allEmails.size > 0) {
-        await sendEnDesarrolloEmail(improvement.title, Array.from(allEmails));
-      }
+      const emailSet = new Set();
+      if (creatorRows[0]?.email) emailSet.add(creatorRows[0].email);
+      if (devRows[0]?.email) emailSet.add(devRows[0].email);
+      adminRows.forEach(a => emailSet.add(a.email));
+      attendeeRows.forEach(att => emailSet.add(att.email));
+
+      await sendEnDesarrolloEmail(improvement.title, Array.from(emailSet));
     }
     if (state === 'Desarrollado' && req.user.role !== 'Desarrollador') {
       return res.status(403).json({ error: 'Solo desarrolladores pueden terminar desarrollo' });
