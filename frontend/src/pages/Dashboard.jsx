@@ -225,19 +225,22 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {newEmails && newEmails.length > 0 && (
-                  <div className="animate-fade-in" style={{padding: '30px', background: 'rgba(56, 189, 248, 0.03)', borderRadius: '24px', border: '1px solid rgba(56, 189, 248, 0.2)'}}>
-                    <label style={{display: 'block', fontSize: '12px', color: 'var(--primary-color)', marginBottom: '15px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em'}}>Programar Levantamiento</label>
-                    <input 
-                      type="datetime-local" 
-                      className="input-control" 
-                      value={newMeetingDate} 
-                      onChange={e => setNewMeetingDate(e.target.value)} 
-                      required 
-                      style={{padding: '16px 20px', borderRadius: '12px', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(15, 23, 42, 0.9)'}}
-                    />
-                  </div>
-                )}
+                <div style={{padding: '30px', background: 'rgba(56, 189, 248, 0.03)', borderRadius: '24px', border: '1px solid rgba(56, 189, 248, 0.2)'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: 'var(--primary-color)', marginBottom: '15px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                    Programar Reunión de Levantamiento <span style={{color: '#F43F5E'}}>*</span>
+                  </label>
+                  <input 
+                    type="datetime-local" 
+                    className="input-control" 
+                    value={newMeetingDate} 
+                    onChange={e => setNewMeetingDate(e.target.value)} 
+                    required 
+                    style={{padding: '16px 20px', borderRadius: '12px', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(15, 23, 42, 0.9)'}}
+                  />
+                  <p style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px'}}>
+                    Indique la fecha y hora estimada para la reunión técnica inicial.
+                  </p>
+                </div>
 
                 <div style={{display: 'flex', gap: '20px', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '30px', borderTop: '1px solid rgba(255,255,255,0.05)'}}>
                   <button type="button" className="btn" style={{padding: '16px 48px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '14px', fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em'}} onClick={() => setShowModal(false)}>

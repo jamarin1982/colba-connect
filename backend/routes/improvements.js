@@ -340,6 +340,9 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { title, description, emails, meetingDate } = req.body;
+    if (!meetingDate) {
+      return res.status(400).json({ error: 'La fecha y hora de la reunión de levantamiento es obligatoria.' });
+    }
     const state = 'Solicitado';
     
     const [result] = await db.execute(
