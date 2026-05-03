@@ -109,7 +109,17 @@ export default function DeveloperAgenda() {
               }}>
                 <button 
                   onClick={() => toggleTask(task.id)}
-                  style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center'}}
+                  disabled={task.improvement_state !== 'En Desarrollo'}
+                  style={{
+                    background: 'none', 
+                    border: 'none', 
+                    padding: 0, 
+                    cursor: task.improvement_state === 'En Desarrollo' ? 'pointer' : 'not-allowed', 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    opacity: task.improvement_state === 'En Desarrollo' ? 1 : 0.3
+                  }}
+                  title={task.improvement_state !== 'En Desarrollo' ? 'Solo se pueden marcar tareas cuando la mejora está "En Desarrollo"' : ''}
                 >
                   {isDone ? <CheckCircle2 color="#10B981" size={28} /> : <Circle color="rgba(255,255,255,0.2)" size={28} />}
                 </button>

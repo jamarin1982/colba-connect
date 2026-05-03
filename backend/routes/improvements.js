@@ -594,6 +594,13 @@ router.put('/tasks/:taskId/toggle', verifyToken, async (req, res) => {
     if (taskRows.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
     
     const task = taskRows[0];
+    
+    // Check improvement state
+    const [impRows] = await db.execute('SELECT state FROM improvements WHERE id = ?', [task.improvement_id]);
+    if (impRows[0].state !== 'En Desarrollo') {
+      return res.status(400).json({ error: 'Solo se pueden marcar tareas cuando la mejora está "En Desarrollo"' });
+    }
+
     const newStatus = task.status === 'Completada' ? 'Pendiente' : 'Completada';
     const completedAt = newStatus === 'Completada' ? new Date() : null;
 

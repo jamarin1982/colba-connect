@@ -63,7 +63,7 @@ router.get('/:id/tasks', verifyToken, async (req, res) => {
     }
 
     const [rows] = await db.execute(`
-      SELECT t.*, i.title as improvement_title 
+      SELECT t.*, i.title as improvement_title, i.state as improvement_state
       FROM tasks t
       JOIN improvements i ON t.improvement_id = i.id
       WHERE i.developer_id = ?
