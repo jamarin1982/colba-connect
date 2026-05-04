@@ -25,7 +25,7 @@ export default function ImprovementDetail() {
 
   const fetchImprovement = async () => {
     try {
-      const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}`);
+      const response = await axios.get(`http://localhost:5000/api/improvements/${id}`);
       setImprovement(response.data);
       fetchComments();
     } catch (error) {
@@ -35,7 +35,7 @@ export default function ImprovementDetail() {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`http://192.168.101.16:5000/api/improvements/${id}/comments`);
+      const response = await axios.get(`http://localhost:5000/api/improvements/${id}/comments`);
       setComments(response.data);
     } catch (error) {
       console.error(error);
@@ -46,7 +46,7 @@ export default function ImprovementDetail() {
     e.preventDefault();
     if (!newComment.trim()) return;
     try {
-      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/comments`, { content: newComment });
+      await axios.post(`http://localhost:5000/api/improvements/${id}/comments`, { content: newComment });
       setNewComment('');
       fetchComments();
     } catch (error) {
@@ -57,7 +57,7 @@ export default function ImprovementDetail() {
   const submitRating = async () => {
     if (userRating === 0) return alert('Por favor selecciona una calificación');
     try {
-      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/rate`, { 
+      await axios.post(`http://localhost:5000/api/improvements/${id}/rate`, { 
         rating: userRating, 
         feedback: userFeedback 
       });
@@ -71,7 +71,7 @@ export default function ImprovementDetail() {
   useEffect(() => {
     fetchImprovement();
     if (user.role === 'Administrador') {
-      axios.get('http://192.168.101.16:5000/api/users')
+      axios.get('http://localhost:5000/api/users')
         .then(res => setDevList(res.data.filter(u => u.role === 'Desarrollador' || u.role === 'Administrador')))
         .catch(console.error);
     }
@@ -88,7 +88,7 @@ export default function ImprovementDetail() {
     }
 
     try {
-      await axios.post(`http://192.168.101.16:5000/api/improvements/${id}/tasks`, formData);
+      await axios.post(`http://localhost:5000/api/improvements/${id}/tasks`, formData);
       setNewTask('');
       setTaskFiles([]);
       fetchImprovement();
@@ -100,7 +100,7 @@ export default function ImprovementDetail() {
   const deleteTask = async (taskId) => {
     if (!window.confirm('¿Eliminar esta tarea?')) return;
     try {
-      await axios.delete(`http://192.168.101.16:5000/api/improvements/tasks/${taskId}`);
+      await axios.delete(`http://localhost:5000/api/improvements/tasks/${taskId}`);
       fetchImprovement();
     } catch (error) {
       
@@ -109,7 +109,7 @@ export default function ImprovementDetail() {
 
   const changeState = async (newState, emails = [], developerId = null, meetingDate = null) => {
     try {
-      await axios.put(`http://192.168.101.16:5000/api/improvements/${id}/state`, { 
+      await axios.put(`http://localhost:5000/api/improvements/${id}/state`, { 
         state: newState, 
         emails,
         developerId,

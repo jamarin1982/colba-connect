@@ -16,7 +16,7 @@ export default function Dashboard() {
 
   const fetchImprovements = async () => {
     try {
-      const res = await axios.get('http://192.168.101.16:5000/api/improvements');
+      const res = await axios.get('http://localhost:5000/api/improvements');
       setImprovements(res.data);
     } catch (error) {
       console.error(error);

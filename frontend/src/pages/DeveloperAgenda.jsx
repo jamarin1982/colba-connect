@@ -14,7 +14,7 @@ export default function DeveloperAgenda() {
   const fetchTasks = () => {
     if (selectedDevId) {
       setLoading(true);
-      axios.get(`http://192.168.101.16:5000/api/users/${selectedDevId}/tasks`)
+      axios.get(`http://localhost:5000/api/users/${selectedDevId}/tasks`)
         .then(res => {
           setTasks(res.data);
           setLoading(false);
@@ -28,7 +28,7 @@ export default function DeveloperAgenda() {
 
   useEffect(() => {
     if (user.role === 'Administrador') {
-      axios.get('http://192.168.101.16:5000/api/users')
+      axios.get('http://localhost:5000/api/users')
         .then(res => setDevelopers(res.data.filter(u => u.role === 'Desarrollador')))
         .catch(console.error);
     } else if (user.role === 'Desarrollador') {
@@ -42,7 +42,7 @@ export default function DeveloperAgenda() {
 
   const toggleTask = async (taskId) => {
     try {
-      await axios.put(`http://192.168.101.16:5000/api/improvements/tasks/${taskId}/toggle`);
+      await axios.put(`http://localhost:5000/api/improvements/tasks/${taskId}/toggle`);
       fetchTasks();
     } catch (err) {
       console.error(err);

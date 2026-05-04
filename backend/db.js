@@ -69,12 +69,16 @@ async function initDb() {
       FOREIGN KEY (improvement_id) REFERENCES improvements(id)
     )`);
 
-    await pool.query(`CREATE TABLE IF NOT EXISTS event_emails (
+    // Create audit_logs table
+    await pool.query(`CREATE TABLE IF NOT EXISTS audit_logs (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      improvement_id INT,
-      event_type ENUM('Levantamiento', 'Socializacion'),
-      email VARCHAR(255) NOT NULL,
-      FOREIGN KEY (improvement_id) REFERENCES improvements(id)
+      improvement_id INT NOT NULL,
+      user_id INT NOT NULL,
+      action VARCHAR(255) NOT NULL,
+      details TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (improvement_id) REFERENCES improvements(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )`);
 
   } catch (err) {

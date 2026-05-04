@@ -36,6 +36,18 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Helper to log audit events
+const logAudit = async (improvementId, userId, action, details = null) => {
+  try {
+    await db.execute(
+      'INSERT INTO audit_logs (improvement_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+      [improvementId, userId, action, details]
+    );
+  } catch (err) {
+    console.error('Error logging audit:', err.message);
+  }
+};
+
 // Helper to get Microsoft Graph Token
 const getGraphToken = async () => {
   const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET } = process.env;
@@ -229,7 +241,7 @@ const sendSocializationEmail = async (improvementName, tasks, emails, meetingDat
     });// Function to send Rating Request Email
 const sendRatingRequestEmail = async (improvementName, creatorEmail, id) => {
   try {
-    const portalUrl = `http://192.168.101.16:5173/improvement/${id}`;
+    const portalUrl = `http://localhost:5173/improvement/${id}`;
     await transporter.sendMail({
       from: `"ColbaConnect" <${process.env.EMAIL_USER || 'no_responder@grupocolba.com'}>`,
       to: creatorEmail,
@@ -425,6 +437,8 @@ router.post('/', verifyToken, async (req, res) => {
       await sendLevantamientoEmail(title, emails, meetingDate);
     }
 
+    await logAudit(improvementId, req.user.id, 'Creación', `Mejora creada con reunión programada para ${meetingDate}`);
+
     res.json({ id: improvementId, title, state });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -619,6 +633,8 @@ router.put('/:id/state', verifyToken, async (req, res) => {
         await sendAsignacionDevEmail(improvement.title, newDevRows[0].name, Array.from(emailSet));
       }
 
+      await logAudit(id, req.user.id, isChange ? 'Cambio de Desarrollador' : 'Asignación de Desarrollador', `Desarrollador: ${newDevRows[0].name}`);
+
       return res.json({ message: 'Desarrollador procesado correctamente' });
     }
     if (state === 'Tareas Asignadas') {
@@ -723,6 +739,11 @@ router.put('/:id/state', verifyToken, async (req, res) => {
     }
 
     await db.execute('UPDATE improvements SET state = ? WHERE id = ?', [state, id]);
+    
+    // Don't log Desarrollador Asignado here as it was logged above
+    if (state !== 'Desarrollador Asignado') {
+      await logAudit(id, req.user.id, 'Cambio de Estado', `Nuevo estado: ${state}`);
+    }
 
     res.json({ message: 'Estado actualizado a ' + state });
   } catch (err) {
@@ -862,6 +883,8 @@ router.post('/:id/rate', verifyToken, async (req, res) => {
       'UPDATE improvements SET rating = ?, rating_feedback = ? WHERE id = ?',
       [rating, feedback, id]
     );
+    
+    await logAudit(id, req.user.id, 'Calificación', `Puntuación: ${rating}/5. Comentario: ${feedback || 'Sin comentario'}`);
 
     res.json({ message: 'Calificación enviada correctamente' });
   } catch (err) {
@@ -899,6 +922,23 @@ router.post('/:id/comments', verifyToken, async (req, res) => {
     );
 
     res.json({ message: 'Comentario agregado' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get audit log for an improvement
+router.get('/:id/audit', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await db.execute(`
+      SELECT al.*, u.name as user_name, u.role as user_role
+      FROM audit_logs al
+      JOIN users u ON al.user_id = u.id
+      WHERE al.improvement_id = ?
+      ORDER BY al.created_at ASC
+    `, [id]);
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

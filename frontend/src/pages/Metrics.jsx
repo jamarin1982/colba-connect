@@ -9,7 +9,7 @@ const Metrics = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get('http://192.168.101.16:5000/api/improvements/stats');
+        const response = await axios.get('http://localhost:5000/api/improvements/stats');
         setStats(response.data);
       } catch (error) {
         console.error('Error fetching stats:', error);
